@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>achxearon | Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="intro-overlay" aria-hidden="true"></div>
+  <a class="dynamic-island" href="#home" aria-label="Back to the top">
+    <span class="island-indicator" aria-hidden="true"></span>
+    <span>achxearon</span>
+    <span class="island-divider" aria-hidden="true"></span>
+    <span class="island-detail">BIT CT2B</span>
+  </a>
+  <main>
+    <section class="hero" id="home">
+      <div class="hero-copy">
+        <p class="hello" aria-label="Hello, I'm">Hello,<span class="hello-im"> I'm</span></p>
+        <h1 class="hero-title" aria-label="&lt;/achxearon&gt;">
+          <span class="hero-name" aria-hidden="true"></span><span class="name-cursor" aria-hidden="true"></span>
+        </h1>
+        <p class="role">BIT CT2B Student - Meneses Campus</p>
+      </div>
+    </section>
+
+    <section class="about" id="about">
+      <h2>more about me</h2>
+      <p>I'm a second-year Bachelor of Information Technology student and Bazzite Linux user. I enjoy exploring new ideas, learning new things, and making time for opportunities that help me grow.</p>
+    </section>
+
+    <section class="skills" id="skills">
+      <h2>skills &amp; interests</h2>
+      <ul class="skill-list">
+        <li>Bazzite Linux</li>
+        <li>Web development</li>
+        <li>Game development</li>
+        <li>Information technology</li>
+        <li>Exploring new tools</li>
+      </ul>
+    </section>
+
+    <section class="projects" id="projects">
+      <h2 class="projects-title">here's what I'm building</h2>
+      <div class="track">
+        <article class="card">
+          <div class="project-preview room-scheduler-preview" aria-hidden="true">
+            <img src="assets/room-scheduler-banner.svg" alt="" loading="lazy">
+          </div>
+          <h3>Room Scheduler</h3>
+          <p>A school project for scheduling rooms on a local campus.</p>
+          <span class="meta">HTML</span>
+          <a href="https://github.com/achxearon/room-scheduler" target="_blank" rel="noopener">View on GitHub</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="contact" id="contact">
+      <h2>contact me</h2>
+      <p class="discord-contact">Message me on Discord: <span>@achxearon</span> <button class="copy-discord" type="button">Copy handle</button></p>
+      <p class="copy-status" id="discord-copy-status" role="status" aria-live="polite"></p>
+      <p>Email me at <a class="mail" href="mailto:achxearon@gmail.com">achxearon@gmail.com</a></p>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
