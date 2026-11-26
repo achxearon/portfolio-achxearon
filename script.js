@@ -134,10 +134,13 @@ function makeCard(repo) {
   preview.className = "project-preview";
   const image = document.createElement("img");
   const isRoomScheduler = repo.name === "room-scheduler";
-  if (isRoomScheduler) preview.classList.add("room-scheduler-preview");
+  const isPortfolio = repo.name.toLowerCase().includes("portfolio");
+  if (isRoomScheduler || isPortfolio) preview.classList.add("room-scheduler-preview");
   image.src = isRoomScheduler
     ? "assets/room-scheduler-banner.svg"
-    : `https://opengraph.githubassets.com/1/${repo.full_name}`;
+    : isPortfolio
+      ? "assets/portfolio-banner.svg"
+      : `https://opengraph.githubassets.com/1/${repo.full_name}`;
   image.alt = `${repo.name} project preview`;
   image.loading = "lazy";
   image.addEventListener("error", () => {
