@@ -11,11 +11,37 @@
 </head>
 <body>
   <div class="intro-overlay" aria-hidden="true"></div>
+  <div class="soot-trail" aria-hidden="true">
+    <span class="soot-particle"></span>
+    <span class="soot-particle"></span>
+    <span class="soot-particle"></span>
+    <span class="soot-particle"></span>
+    <span class="soot-particle"></span>
+    <span class="soot-particle"></span>
+    <span class="soot-particle"></span>
+    <span class="soot-particle"></span>
+    <span class="soot-particle"></span>
+    <svg class="soot-ball" viewBox="0 0 32 40">
+      <path d="M2 2v31l8-8 6 13 6-3-6-12h12L2 2Z" fill="#17161a" stroke="#f4f2f8" stroke-linejoin="round" stroke-width="2"/>
+    </svg>
+  </div>
   <a class="dynamic-island" href="#home" aria-label="Back to the top">
-    <span class="island-indicator" aria-hidden="true"></span>
-    <span>achxearon</span>
-    <span class="island-divider" aria-hidden="true"></span>
-    <span class="island-detail">BIT CT2B</span>
+    <span class="island-brand">
+      <span class="island-indicator" aria-hidden="true"></span>
+      <span>achxearon</span>
+      <span class="island-divider" aria-hidden="true"></span>
+      <span class="island-detail">BIT CT2B</span>
+    </span>
+    <span class="island-widgets" aria-label="Local time and date">
+      <time class="island-time" aria-label="Local time">--:--</time>
+      <span class="island-widget-divider" aria-hidden="true"></span>
+      <time class="island-date" aria-label="Local date">---</time>
+      <span class="island-widget-divider" aria-hidden="true"></span>
+      <span class="island-status">
+        <span class="island-status-indicator" aria-hidden="true"></span>
+        Site live
+      </span>
+    </span>
   </a>
   <main>
     <section class="hero" id="home">
@@ -48,13 +74,21 @@
       <h2 class="projects-title">here's what I'm building</h2>
       <div class="track">
         <article class="card">
-          <div class="project-preview room-scheduler-preview" aria-hidden="true">
+          <div class="project-preview wide-banner-preview" aria-hidden="true">
             <img src="assets/room-scheduler-banner.svg" alt="" loading="lazy">
           </div>
           <h3>Room Scheduler</h3>
           <p>A school project for scheduling rooms on a local campus.</p>
           <span class="meta">HTML</span>
           <a href="https://github.com/achxearon/room-scheduler" target="_blank" rel="noopener">View on GitHub</a>
+        </article>
+        <article class="card coming-soon-card">
+          <div class="project-preview wide-banner-preview" aria-hidden="true">
+            <img src="assets/coming-soon-banner.svg" alt="" loading="lazy">
+          </div>
+          <h3>Coming Soon</h3>
+          <p>A new project is in the works. Check back soon to see what's next.</p>
+          <span class="meta">In progress</span>
         </article>
       </div>
     </section>

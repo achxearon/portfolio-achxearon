@@ -31,14 +31,48 @@ a:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
   background: #000;
   pointer-events: none;
 }
+.soot-trail {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+.soot-trail.is-active {
+  opacity: 1;
+}
+.soot-ball, .soot-particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+.soot-ball {
+  width: 1.35rem;
+  height: 1.7rem;
+  overflow: visible;
+  filter: drop-shadow(0 0.15rem 0.22rem rgba(0, 0, 0, 0.55));
+  will-change: transform;
+}
+.soot-particle {
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 50%;
+  background: #242228;
+  box-shadow: 0 0 0.35rem rgba(0, 0, 0, 0.35);
+  transition: opacity 360ms ease;
+  will-change: transform;
+}
 .dynamic-island {
   position: fixed;
   top: 1.25rem;
-  left: 50%;
+  right: var(--pad);
   z-index: 5;
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.85rem;
   padding: 0.65rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
@@ -53,6 +87,11 @@ a:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
+.island-brand, .island-widgets {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
 .island-indicator {
   width: 0.45rem;
   height: 0.45rem;
@@ -62,8 +101,34 @@ a:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
 }
 .island-divider { height: 1rem; border-left: 1px solid rgba(255, 255, 255, 0.22); }
 .island-detail { color: var(--muted); font-size: 0.78rem; }
+.island-widgets { color: var(--muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.island-widget-divider { height: 0.8rem; border-left: 1px solid rgba(255, 255, 255, 0.18); }
+.island-status { display: inline-flex; align-items: center; gap: 0.35rem; }
+.island-status-indicator {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: #64d99a;
+  box-shadow: 0 0 0.55rem rgba(100, 217, 154, 0.65);
+}
 .dynamic-island:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
 main { position: relative; z-index: 2; }
+
+@media (max-width: 520px) {
+  .dynamic-island {
+    top: 0.75rem;
+    right: 0.75rem;
+    max-width: calc(100vw - 1.5rem);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+    padding: 0.65rem 0.8rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+  }
+  .island-brand, .island-widgets { gap: 0.45rem; }
+  .island-widgets { font-size: 0.7rem; }
+}
 
 section { padding: 0 var(--pad); }
 
@@ -84,7 +149,7 @@ section { padding: 0 var(--pad); }
 .hello {
   display: inline-block;
   padding: 0.08em 0.35em;
-  border-radius: 0.15em;
+  border-radius: 999px;
   background-color: #000;
   font-size: clamp(1rem, 1.6vw, 1.4rem);
   font-weight: 500;
@@ -222,9 +287,9 @@ section { padding: 0 var(--pad); }
   height: 100%;
   object-fit: cover;
 }
-.room-scheduler-preview { aspect-ratio: 4 / 1; background: #111; }
-.room-scheduler-preview::before { content: none; }
-.room-scheduler-preview img { object-fit: contain; }
+.wide-banner-preview { aspect-ratio: 4 / 1; background: #111; }
+.wide-banner-preview::before { content: none; }
+.wide-banner-preview img { object-fit: contain; }
 .card p { color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .card .meta { color: var(--muted); font-size: 0.85rem; }
 .card a { margin-top: auto; width: fit-content; text-underline-offset: 4px; transition: color 180ms ease, text-underline-offset 180ms ease; }

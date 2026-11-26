@@ -6,6 +6,99 @@ const heroName = document.querySelector(".hero-name");
 const heroNameText = "</achxearon>";
 const hello = document.querySelector(".hello");
 const helloIm = document.querySelector(".hello-im");
+
+const islandTime = document.querySelector(".island-time");
+const islandDate = document.querySelector(".island-date");
+const localTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const localDateFormatter = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+function updateIslandClock() {
+  const now = new Date();
+  const localDate = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+  islandTime.dateTime = now.toISOString();
+  islandDate.dateTime = localDate;
+  islandTime.textContent = localTimeFormatter.format(now);
+  islandDate.textContent = localDateFormatter.format(now);
+}
+updateIslandClock();
+window.setInterval(updateIslandClock, 60_000);
+
+if (!reduceMotion) {
+  const sootTrail = document.querySelector(".soot-trail");
+  const sootBall = document.querySelector(".soot-ball");
+  const sootParticles = Array.from(document.querySelectorAll(".soot-particle"));
+  const sootHistory = [];
+  let sootFrame = 0;
+  let sootFadeTimeout;
+  let sootTarget = getSootPathPosition();
+  let sootPosition = { ...sootTarget };
+
+  function getSootPathPosition() {
+    const scrollRange = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = scrollRange > 0 ? window.scrollY / scrollRange : 0;
+    return {
+      x: window.innerWidth * (0.8 + Math.sin(progress * Math.PI * 6) * 0.07),
+      y: window.innerHeight * (0.16 + progress * 0.68) + Math.sin(progress * Math.PI * 12) * 14,
+    };
+  }
+
+  function renderSootTrail() {
+    sootFrame = 0;
+    sootPosition.x += (sootTarget.x - sootPosition.x) * 0.16;
+    sootPosition.y += (sootTarget.y - sootPosition.y) * 0.16;
+    const lastPosition = sootHistory[0];
+    if (!lastPosition || Math.hypot(sootPosition.x - lastPosition.x, sootPosition.y - lastPosition.y) >= 5) {
+      sootHistory.unshift({ ...sootPosition });
+      sootHistory.length = Math.min(sootHistory.length, sootParticles.length);
+    }
+
+    sootBall.style.transform = `translate3d(${sootPosition.x}px, ${sootPosition.y}px, 0)`;
+    sootParticles.forEach((particle, index) => {
+      const position = sootHistory[index + 1];
+      particle.style.opacity = position ? String(0.34 - index * 0.032) : "0";
+      if (position) {
+        particle.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) translate(-50%, -50%) scale(${1 - index * 0.055})`;
+      }
+    });
+
+    if (Math.abs(sootTarget.x - sootPosition.x) > 0.5 || Math.abs(sootTarget.y - sootPosition.y) > 0.5) {
+      sootFrame = window.requestAnimationFrame(renderSootTrail);
+    }
+  }
+
+  function moveSootWithScroll() {
+    sootTarget = getSootPathPosition();
+    window.clearTimeout(sootFadeTimeout);
+    sootFadeTimeout = window.setTimeout(() => {
+      sootParticles.forEach((particle) => {
+        particle.style.opacity = "0";
+      });
+    }, 240);
+    if (!sootFrame) sootFrame = window.requestAnimationFrame(renderSootTrail);
+  }
+
+  sootTrail.classList.add("is-active");
+  window.addEventListener("scroll", moveSootWithScroll, { passive: true });
+  window.addEventListener("resize", () => {
+    sootHistory.length = 0;
+    sootTarget = getSootPathPosition();
+    sootPosition = { ...sootTarget };
+    sootBall.style.transform = `translate3d(${sootPosition.x}px, ${sootPosition.y}px, 0)`;
+    if (!sootFrame) sootFrame = window.requestAnimationFrame(renderSootTrail);
+  });
+  sootBall.style.transform = `translate3d(${sootPosition.x}px, ${sootPosition.y}px, 0)`;
+}
+
 function renderHeroName(count) {
   const fragment = document.createDocumentFragment();
   Array.from(heroNameText.slice(0, count)).forEach((character) => {
@@ -125,6 +218,7 @@ renderTyped(reduceMotion ? fullText.length : 0);
 
 /* ---------- GitHub projects ---------- */
 const track = document.querySelector(".track");
+const comingSoonCard = track.querySelector(".coming-soon-card");
 
 function makeCard(repo) {
   const card = document.createElement("article");
@@ -135,7 +229,7 @@ function makeCard(repo) {
   const image = document.createElement("img");
   const isRoomScheduler = repo.name === "room-scheduler";
   const isPortfolio = repo.name.toLowerCase().includes("portfolio");
-  if (isRoomScheduler || isPortfolio) preview.classList.add("room-scheduler-preview");
+  if (isRoomScheduler || isPortfolio) preview.classList.add("wide-banner-preview");
   image.src = isRoomScheduler
     ? "assets/room-scheduler-banner.svg"
     : isPortfolio
@@ -199,9 +293,9 @@ fetch(`https://api.github.com/users/${GITHUB_USER}/repos?sort=updated&per_page=3
   .then((repos) => {
     const list = repos.filter((r) => !r.fork && r.name !== GITHUB_USER).slice(0, 8);
     if (!list.length) return;
-    track.replaceChildren(...list.map(makeCard));
+    track.replaceChildren(...list.map(makeCard), comingSoonCard);
     prepareHeadingTyping(track);
-    document.querySelector(".projects").classList.toggle("has-multiple-projects", list.length > 1);
+    document.querySelector(".projects").classList.toggle("has-multiple-projects", track.children.length > 1);
     if (!reduceMotion) {
       animateHeadingTyping(track);
       setupProjectScroll();
@@ -228,6 +322,8 @@ if (!reduceMotion) {
   intro.to(".hello", { opacity: 1, duration: 0.25, ease: "power1.out" });
   intro.to({}, { duration: 0.15 });
   intro.to(".hello", { x: 0, y: 0, duration: 0.9, ease: "power2.inOut" });
+  intro.to(".hello", { scale: 1.12, duration: 0.2, ease: "power2.out" });
+  intro.to(".hello", { scale: 1, duration: 0.65, ease: "elastic.out(1, 0.45)" });
   const nameTyping = { characters: 0 };
   intro.set(".name-cursor", { visibility: "visible" });
   intro.call(() => {
