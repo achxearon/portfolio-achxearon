@@ -1,6 +1,8 @@
-# Student Portfolio
+![Achxearon Portfolio](assets/portfolio-banner.svg)
 
-Personal student portfolio website built with HTML, CSS, and JavaScript.
+# Achxearon Portfolio
+
+Personal portfolio of Achxearon, a Bachelor of Information Technology student.
 
 ## Live Preview
 
