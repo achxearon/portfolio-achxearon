@@ -5,6 +5,7 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 const heroName = document.querySelector(".hero-name");
 const heroNameText = "</achxearon>";
 const hello = document.querySelector(".hello");
+const helloText = document.querySelector(".hello-text");
 const helloIm = document.querySelector(".hello-im");
 
 const islandTime = document.querySelector(".island-time");
@@ -32,6 +33,18 @@ function updateIslandClock() {
 }
 updateIslandClock();
 window.setInterval(updateIslandClock, 60_000);
+
+if (!reduceMotion) {
+  const updateTriangleParallax = () => {
+    const scrollRange = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = scrollRange > 0 ? window.scrollY / scrollRange : 0;
+    const offset = -progress * window.innerHeight * 0.18;
+    document.documentElement.style.setProperty("--triangle-parallax-y", `${offset}px`);
+  };
+  window.addEventListener("scroll", updateTriangleParallax, { passive: true });
+  window.addEventListener("resize", updateTriangleParallax);
+  updateTriangleParallax();
+}
 
 if (!reduceMotion) {
   const sootTrail = document.querySelector(".soot-trail");
@@ -263,30 +276,45 @@ function makeCard(repo) {
   return card;
 }
 
-let projectScrollMedia;
-function setupProjectScroll() {
-  if (track.children.length < 2) return;
+let projectLoop;
+let projectLoopResizeTimeout;
+let projectLoopCards = Array.from(track.children);
+function setupProjectLoop() {
+  projectLoop?.kill();
+  track.querySelectorAll(".project-card-clone").forEach((card) => card.remove());
+  gsap.set(track, { x: 0 });
 
-  projectScrollMedia?.revert();
-  projectScrollMedia = gsap.matchMedia();
-  projectScrollMedia.add("(min-width: 800px)", () => {
-    if (track.scrollWidth <= window.innerWidth) return;
-    const distance = () => track.scrollWidth - window.innerWidth + 160;
+  if (reduceMotion || projectLoopCards.length < 2) return;
 
-    gsap.to(track, {
-      x: () => -distance(),
-      ease: "none",
-      scrollTrigger: {
-        trigger: ".projects",
-        start: "top top",
-        end: () => "+=" + distance(),
-        pin: true,
-        scrub: true,
-        invalidateOnRefresh: true,
-      },
+  const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 0;
+  const loopDistance = projectLoopCards.reduce((distance, card) => distance + card.offsetWidth + gap, 0);
+  let cloneIndex = 0;
+  while (track.scrollWidth < window.innerWidth + loopDistance) {
+    const clone = projectLoopCards[cloneIndex % projectLoopCards.length].cloneNode(true);
+    clone.classList.add("project-card-clone");
+    clone.setAttribute("aria-hidden", "true");
+    clone.querySelectorAll("a, button, input, select, textarea, [tabindex]").forEach((element) => {
+      element.setAttribute("tabindex", "-1");
     });
+    track.append(clone);
+    cloneIndex += 1;
+  }
+
+  projectLoop = gsap.to(track, {
+    x: -loopDistance,
+    duration: loopDistance / 36,
+    ease: "none",
+    repeat: -1,
   });
 }
+
+setupProjectLoop();
+track.addEventListener("pointerenter", () => projectLoop?.pause());
+track.addEventListener("pointerleave", () => projectLoop?.play());
+track.addEventListener("focusin", () => projectLoop?.pause());
+track.addEventListener("focusout", (event) => {
+  if (!track.contains(event.relatedTarget)) projectLoop?.play();
+});
 
 fetch(`https://api.github.com/users/${GITHUB_USER}/repos?sort=updated&per_page=30`)
   .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
@@ -295,40 +323,90 @@ fetch(`https://api.github.com/users/${GITHUB_USER}/repos?sort=updated&per_page=3
     if (!list.length) return;
     track.replaceChildren(...list.map(makeCard), comingSoonCard);
     prepareHeadingTyping(track);
-    document.querySelector(".projects").classList.toggle("has-multiple-projects", track.children.length > 1);
+    projectLoopCards = Array.from(track.children);
+    setupProjectLoop();
     if (!reduceMotion) {
       animateHeadingTyping(track);
-      setupProjectScroll();
       projectReveal?.scrollTrigger?.kill();
       projectReveal?.kill();
-      projectReveal = animateScrollReveal(Array.from(track.children), ".projects", 0.12);
-      ScrollTrigger.refresh();
+      projectReveal = animateScrollReveal(projectLoopCards, ".projects", 0.12);
     }
   })
   .catch(() => { /* keep placeholder cards */ });
+
+window.addEventListener("resize", () => {
+  if (reduceMotion || !projectLoopCards.length) return;
+  window.clearTimeout(projectLoopResizeTimeout);
+  projectLoopResizeTimeout = window.setTimeout(setupProjectLoop, 120);
+});
 
 if (!reduceMotion) {
   animateHeadingTyping(document);
 
   /* ---------- Intro: center the greeting, then reveal the name ---------- */
+  const helloMessage = helloText.textContent;
+  const helloCharacters = Array.from(helloMessage, (character) => {
+    const span = document.createElement("span");
+    span.className = "hello-character";
+    span.textContent = character;
+    return span;
+  });
+  helloText.replaceChildren(...helloCharacters);
+  const renderHello = (count) => {
+    helloCharacters.forEach((character, index) => {
+      character.style.opacity = index < count ? "1" : "0";
+    });
+  };
+  const helloTyping = { characters: 0 };
   const helloBounds = hello.getBoundingClientRect();
   gsap.set(hello, {
     opacity: 0,
+    scale: 1.8,
+    textShadow: "0 0 0 rgba(139, 120, 255, 0)",
     x: window.innerWidth / 2 - (helloBounds.left + helloBounds.width / 2),
     y: window.innerHeight / 2 - (helloBounds.top + helloBounds.height / 2),
   });
+  renderHello(0);
   gsap.set(".role", { opacity: 0 });
+  document.documentElement.classList.add("intro-running");
   const intro = gsap.timeline();
-  intro.to(".hello", { opacity: 1, duration: 0.25, ease: "power1.out" });
-  intro.to({}, { duration: 0.15 });
-  intro.to(".hello", { x: 0, y: 0, duration: 0.9, ease: "power2.inOut" });
-  intro.to(".hello", { scale: 1.12, duration: 0.2, ease: "power2.out" });
-  intro.to(".hello", { scale: 1, duration: 0.65, ease: "elastic.out(1, 0.45)" });
+  intro.eventCallback("onComplete", () => {
+    document.documentElement.classList.remove("intro-running");
+  });
+  intro.to(".hello", {
+    opacity: 1,
+    scale: 2,
+    textShadow: "0 0 22px rgba(139, 120, 255, 0.5)",
+    duration: 0.32,
+    ease: "back.out(2.4)",
+  });
+  intro.to(".hello", {
+    scale: 1.8,
+    duration: 0.18,
+    ease: "power2.out",
+  });
+  intro.to(helloTyping, {
+    characters: helloMessage.length,
+    duration: 0.55,
+    ease: "none",
+    onUpdate: () => {
+      renderHello(Math.round(helloTyping.characters));
+    },
+  });
+  intro.to({}, { duration: 0.18 });
   const nameTyping = { characters: 0 };
   intro.set(".name-cursor", { visibility: "visible" });
   intro.call(() => {
     nameTyping.characters = 1;
     renderHeroName(1);
+  });
+  intro.to(".hello", {
+    x: 0,
+    y: 0,
+    scale: 1,
+    textShadow: "0 0 0 rgba(139, 120, 255, 0)",
+    duration: 1,
+    ease: "power3.inOut",
   });
   intro.to(nameTyping, {
     characters: heroNameText.length,
@@ -337,16 +415,14 @@ if (!reduceMotion) {
     onUpdate: () => {
       renderHeroName(Math.round(nameTyping.characters));
     },
-  });
+  }, "<0.18");
   intro.set(".intro-overlay", { opacity: 0 });
   const backgroundBlinkGaps = [0.012, 0.012, 0.015, 0.018, 0.021, 0.024, 0.027, 0.03, 0.033, 0.036, 0.039, 0.033];
   backgroundBlinkGaps.forEach((gap, index) => {
     intro.to({}, { duration: gap });
     intro.set(".intro-overlay", { opacity: index % 2 === 0 ? 0 : 1 });
-    intro.set(hello, { backgroundColor: index % 2 === 0 ? "transparent" : "#000" });
   });
   intro.set(".intro-overlay", { opacity: 0 });
-  intro.set(hello, { backgroundColor: "transparent" });
   intro.set(helloIm, { display: "inline", opacity: 0 });
   intro.to(helloIm, { opacity: 1, duration: 0.18, ease: "power1.out" });
   intro.to(".role", { opacity: 1, duration: 0.25, ease: "power2.out" }, "-=0.1");
@@ -378,8 +454,5 @@ if (!reduceMotion) {
       scrub: 0.3,
     },
   });
-
-  /* ---------- Projects: horizontal pinned scroll ---------- */
-  setupProjectScroll();
 
 }
