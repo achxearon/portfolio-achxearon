@@ -4,12 +4,26 @@ const GITHUB_USER = "achxearon"; // change to your GitHub username
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const heroName = document.querySelector(".hero-name");
 const heroNameText = "</achxearon>";
+function updateElementMetrics(element) {
+  const { width, height } = element.getBoundingClientRect();
+  element.dataset.metrics = `${element.dataset.metricLabel} ${Math.round(width)} × ${Math.round(height)} px`;
+}
+const metricResizeObserver = new ResizeObserver((entries) => {
+  entries.forEach(({ target }) => updateElementMetrics(target));
+});
+function enableMetricOutline(element, label) {
+  element.classList.add("metric-outline");
+  element.dataset.metricLabel = label;
+  element.addEventListener("pointerenter", () => updateElementMetrics(element));
+  metricResizeObserver.observe(element);
+}
+enableMetricOutline(heroName, "user");
 const hello = document.querySelector(".hello");
 const helloText = document.querySelector(".hello-text");
 const helloIm = document.querySelector(".hello-im");
 
-const islandTime = document.querySelector(".island-time");
-const islandDate = document.querySelector(".island-date");
+const islandTimes = document.querySelectorAll(".island-time");
+const islandDates = document.querySelectorAll(".island-date");
 const localTimeFormatter = new Intl.DateTimeFormat(undefined, {
   hour: "2-digit",
   minute: "2-digit",
@@ -26,13 +40,65 @@ function updateIslandClock() {
     String(now.getMonth() + 1).padStart(2, "0"),
     String(now.getDate()).padStart(2, "0"),
   ].join("-");
-  islandTime.dateTime = now.toISOString();
-  islandDate.dateTime = localDate;
-  islandTime.textContent = localTimeFormatter.format(now);
-  islandDate.textContent = localDateFormatter.format(now);
+  islandTimes.forEach((time) => {
+    time.dateTime = now.toISOString();
+    time.textContent = localTimeFormatter.format(now);
+  });
+  islandDates.forEach((date) => {
+    date.dateTime = localDate;
+    date.textContent = localDateFormatter.format(now);
+  });
 }
 updateIslandClock();
 window.setInterval(updateIslandClock, 60_000);
+
+const pageAccentLayer = document.querySelector(".page-accent-layer");
+function renderPageAccents() {
+  const width = document.documentElement.clientWidth;
+  const height = document.documentElement.scrollHeight;
+  const accentTypes = ["circle", "square", "triangle", "cross"];
+  const fragment = document.createDocumentFragment();
+  const placements = [];
+  const targetCount = Math.round((width * height) / 65000);
+  const minimumSpacing = 145;
+  const edgePadding = 60;
+
+  pageAccentLayer.style.height = `${height}px`;
+  for (let attempt = 0; attempt < targetCount * 40 && placements.length < targetCount; attempt += 1) {
+    const x = edgePadding + Math.random() * Math.max(0, width - edgePadding * 2);
+    const y = edgePadding + Math.random() * Math.max(0, height - edgePadding * 2);
+    if (placements.some((point) => Math.hypot(point.x - x, point.y - y) < minimumSpacing)) continue;
+
+    const accent = document.createElement("span");
+    const type = accentTypes[Math.floor(Math.random() * accentTypes.length)];
+    accent.className = `page-accent page-accent--${type}`;
+    accent.style.left = `${(x / width) * 100}%`;
+    accent.style.top = `${y}px`;
+    accent.style.opacity = String(0.18 + Math.random() * 0.25);
+    accent.style.setProperty("--accent-rotation", `${Math.round(Math.random() * 360)}deg`);
+    placements.push({ x, y });
+    fragment.append(accent);
+  }
+  pageAccentLayer.replaceChildren(fragment);
+}
+renderPageAccents();
+function updateAccentParallax() {
+  pageAccentLayer.style.setProperty("--accent-parallax-y", `${window.scrollY * 0.08}px`);
+}
+if (!reduceMotion) {
+  window.addEventListener("scroll", updateAccentParallax, { passive: true });
+  updateAccentParallax();
+}
+let accentResizeFrame = 0;
+const pageSizeObserver = new ResizeObserver(() => {
+  if (accentResizeFrame) return;
+  accentResizeFrame = window.requestAnimationFrame(() => {
+    accentResizeFrame = 0;
+    renderPageAccents();
+  });
+});
+pageSizeObserver.observe(document.body);
+window.addEventListener("resize", renderPageAccents);
 
 if (!reduceMotion) {
   const updateTriangleParallax = () => {
@@ -51,8 +117,10 @@ if (!reduceMotion) {
   const sootBall = document.querySelector(".soot-ball");
   const sootParticles = Array.from(document.querySelectorAll(".soot-particle"));
   const sootHistory = [];
+  const hoverTargets = "a, button, [role='button'], .skill-list li, .card, .hero-name, .hello, .role, h1, h2, h3, p, img";
   let sootFrame = 0;
   let sootFadeTimeout;
+  let highlightedTarget;
   let sootTarget = getSootPathPosition();
   let sootPosition = { ...sootTarget };
 
@@ -62,6 +130,15 @@ if (!reduceMotion) {
     return {
       x: window.innerWidth * (0.8 + Math.sin(progress * Math.PI * 6) * 0.07),
       y: window.innerHeight * (0.16 + progress * 0.68) + Math.sin(progress * Math.PI * 12) * 14,
+    };
+  }
+
+  function getSootTargetPosition(target) {
+    const bounds = target.getBoundingClientRect();
+    const cursorBounds = sootBall.getBoundingClientRect();
+    return {
+      x: bounds.right - cursorBounds.width,
+      y: bounds.bottom - cursorBounds.height,
     };
   }
 
@@ -89,8 +166,15 @@ if (!reduceMotion) {
     }
   }
 
+  function restartSootRender() {
+    if (sootFrame) window.cancelAnimationFrame(sootFrame);
+    sootFrame = window.requestAnimationFrame(renderSootTrail);
+  }
+
   function moveSootWithScroll() {
-    sootTarget = getSootPathPosition();
+    sootTarget = highlightedTarget
+      ? getSootTargetPosition(highlightedTarget)
+      : getSootPathPosition();
     window.clearTimeout(sootFadeTimeout);
     sootFadeTimeout = window.setTimeout(() => {
       sootParticles.forEach((particle) => {
@@ -100,11 +184,45 @@ if (!reduceMotion) {
     if (!sootFrame) sootFrame = window.requestAnimationFrame(renderSootTrail);
   }
 
+  function moveSootToTarget(target) {
+    const bounds = target.getBoundingClientRect();
+    if (!bounds.width && !bounds.height) return;
+    highlightedTarget = target;
+    window.clearTimeout(sootFadeTimeout);
+    sootTarget = getSootTargetPosition(target);
+    restartSootRender();
+  }
+
+  function restoreSootPath() {
+    highlightedTarget = undefined;
+    sootTarget = getSootPathPosition();
+    window.clearTimeout(sootFadeTimeout);
+    sootFadeTimeout = window.setTimeout(() => {
+      sootParticles.forEach((particle) => {
+        particle.style.opacity = "0";
+      });
+    }, 240);
+    restartSootRender();
+  }
+
   sootTrail.classList.add("is-active");
   window.addEventListener("scroll", moveSootWithScroll, { passive: true });
+  document.addEventListener("pointerover", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const target = event.target.closest(hoverTargets);
+    if (target && target !== highlightedTarget) moveSootToTarget(target);
+  });
+  document.addEventListener("pointerout", (event) => {
+    if (!highlightedTarget || !(event.target instanceof Element)) return;
+    if (highlightedTarget.contains(event.target) && !highlightedTarget.contains(event.relatedTarget)) {
+      restoreSootPath();
+    }
+  });
   window.addEventListener("resize", () => {
     sootHistory.length = 0;
-    sootTarget = getSootPathPosition();
+    sootTarget = highlightedTarget
+      ? getSootTargetPosition(highlightedTarget)
+      : getSootPathPosition();
     sootPosition = { ...sootTarget };
     sootBall.style.transform = `translate3d(${sootPosition.x}px, ${sootPosition.y}px, 0)`;
     if (!sootFrame) sootFrame = window.requestAnimationFrame(renderSootTrail);
@@ -122,24 +240,8 @@ function renderHeroName(count) {
   });
   heroName.replaceChildren(fragment);
 }
-if (reduceMotion) renderHeroName(heroNameText.length);
 
-gsap.fromTo(".dynamic-island", {
-  autoAlpha: 0,
-  y: -20,
-  scale: 0.88,
-}, {
-  autoAlpha: 1,
-  y: 0,
-  scale: 1,
-  duration: reduceMotion ? 0 : 0.45,
-  ease: "back.out(1.7)",
-  scrollTrigger: {
-    trigger: ".hero-title",
-    start: "bottom top",
-    toggleActions: "play none none reverse",
-  },
-});
+renderHeroName(reduceMotion ? heroNameText.length : 0);
 
 function prepareHeadingTyping(root) {
   root.querySelectorAll("h2, .card h3").forEach((heading) => {
@@ -147,13 +249,17 @@ function prepareHeadingTyping(root) {
     const text = heading.textContent.trim();
     heading.setAttribute("aria-label", text);
     heading.textContent = "";
+    const label = document.createElement("span");
+    label.className = "heading-label";
+    enableMetricOutline(label, `h${heading.tagName.slice(1)}`);
     Array.from(text).forEach((character) => {
       const span = document.createElement("span");
       span.className = "heading-character";
       span.setAttribute("aria-hidden", "true");
       span.textContent = character === " " ? "\u00a0" : character;
-      heading.append(span);
+      label.append(span);
     });
+    heading.append(label);
     heading.dataset.typingReady = "true";
   });
 }
@@ -161,10 +267,11 @@ function prepareHeadingTyping(root) {
 function animateHeadingTyping(root) {
   root.querySelectorAll("[data-typing-ready]").forEach((heading) => {
     const characters = heading.querySelectorAll(".heading-character");
-    gsap.set(characters, { autoAlpha: 0 });
+    gsap.set(characters, { autoAlpha: 0, filter: "blur(5px)" });
     gsap.to(characters, {
       autoAlpha: 1,
-      duration: 0.01,
+      filter: "blur(0px)",
+      duration: 0.08,
       stagger: 0.045,
       scrollTrigger: {
         trigger: heading,
@@ -181,9 +288,11 @@ function animateScrollReveal(targets, trigger, stagger = 0.08) {
   return gsap.fromTo(targets, {
     autoAlpha: 0,
     y: 24,
+    filter: "blur(8px)",
   }, {
     autoAlpha: 1,
     y: 0,
+    filter: "blur(0px)",
     duration: 0.65,
     stagger,
     ease: "power3.out",
@@ -195,22 +304,36 @@ function animateScrollReveal(targets, trigger, stagger = 0.08) {
   });
 }
 
+function addRapidBlink(timeline, targets, position, duration = 0.055, ease = "none") {
+  return timeline.to(targets, {
+    autoAlpha: 0,
+    duration,
+    repeat: 5,
+    yoyo: true,
+    ease,
+  }, position);
+}
+
+function addSlowingNameBlink(timeline, targets, position) {
+  const blink = gsap.timeline();
+  const intervals = [0.05, 0.07, 0.09, 0.12, 0.16, 0.21, 0.3];
+  let elapsed = 0;
+
+  intervals.forEach((interval) => {
+    blink.set(targets, { autoAlpha: 0 }, elapsed);
+    blink.set(targets, { autoAlpha: 1 }, elapsed + interval / 2);
+    elapsed += interval;
+  });
+  blink.set(targets, { autoAlpha: 1 }, elapsed);
+
+  return timeline.add(blink, position);
+}
+
 prepareHeadingTyping(document);
 let projectReveal;
 animateScrollReveal(gsap.utils.toArray(".skill-list li"), ".skills", 0.07);
-animateScrollReveal(gsap.utils.toArray(".contact > p:not(.copy-status)"), ".contact");
+animateScrollReveal(gsap.utils.toArray(".contact > p"), ".contact");
 projectReveal = animateScrollReveal(Array.from(document.querySelectorAll(".track .card")), ".projects", 0.12);
-
-const copyDiscordButton = document.querySelector(".copy-discord");
-const discordCopyStatus = document.querySelector("#discord-copy-status");
-copyDiscordButton.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText("@achxearon");
-    discordCopyStatus.textContent = "Discord handle copied.";
-  } catch {
-    discordCopyStatus.textContent = "Couldn't copy automatically. Your handle is @achxearon.";
-  }
-});
 
 /* ---------- Typed about text (scroll-driven) ---------- */
 const typedEl = document.querySelector(".about p");
@@ -228,6 +351,7 @@ const renderTyped = (n) => {
   restSpan.textContent = fullText.slice(n);
 };
 renderTyped(reduceMotion ? fullText.length : 0);
+if (!reduceMotion) typedSpan.style.filter = "blur(6px)";
 
 /* ---------- GitHub projects ---------- */
 const track = document.querySelector(".track");
@@ -352,30 +476,35 @@ if (!reduceMotion) {
     return span;
   });
   helloText.replaceChildren(...helloCharacters);
-  const renderHello = (count) => {
-    helloCharacters.forEach((character, index) => {
-      character.style.opacity = index < count ? "1" : "0";
-    });
-  };
-  const helloTyping = { characters: 0 };
   const helloBounds = hello.getBoundingClientRect();
   gsap.set(hello, {
     opacity: 0,
     scale: 1.8,
+    filter: "blur(8px)",
     textShadow: "0 0 0 rgba(139, 120, 255, 0)",
     x: window.innerWidth / 2 - (helloBounds.left + helloBounds.width / 2),
     y: window.innerHeight / 2 - (helloBounds.top + helloBounds.height / 2),
   });
-  renderHello(0);
-  gsap.set(".role", { opacity: 0 });
-  document.documentElement.classList.add("intro-running");
+  gsap.set(helloCharacters, { autoAlpha: 0, y: 24, rotation: -10, filter: "blur(6px)" });
+  gsap.set(".role", { opacity: 0, filter: "blur(8px)" });
+  const trianglePaths = Array.from(document.querySelectorAll(".triangle-background path"));
+  gsap.set(trianglePaths, { opacity: 0 });
+  gsap.set(".hero-name", { filter: "blur(10px)" });
+  gsap.set(".dynamic-island", {
+    autoAlpha: 0,
+    x: 24,
+    scale: 0.88,
+    filter: "blur(8px)",
+  });
+  document.documentElement.classList.add("intro-running", "hello-intro");
   const intro = gsap.timeline();
   intro.eventCallback("onComplete", () => {
-    document.documentElement.classList.remove("intro-running");
+    document.documentElement.classList.remove("intro-running", "hello-intro");
   });
   intro.to(".hello", {
     opacity: 1,
     scale: 2,
+    filter: "blur(0px)",
     textShadow: "0 0 22px rgba(139, 120, 255, 0.5)",
     duration: 0.32,
     ease: "back.out(2.4)",
@@ -385,18 +514,20 @@ if (!reduceMotion) {
     duration: 0.18,
     ease: "power2.out",
   });
-  intro.to(helloTyping, {
-    characters: helloMessage.length,
+  intro.to(helloCharacters, {
+    autoAlpha: 1,
+    y: 0,
+    rotation: 0,
+    filter: "blur(0px)",
     duration: 0.55,
-    ease: "none",
-    onUpdate: () => {
-      renderHello(Math.round(helloTyping.characters));
-    },
+    stagger: 0.1,
+    ease: "back.out(2.2)",
   });
   intro.to({}, { duration: 0.18 });
   const nameTyping = { characters: 0 };
   intro.set(".name-cursor", { visibility: "visible" });
   intro.call(() => {
+    document.documentElement.classList.remove("hello-intro");
     nameTyping.characters = 1;
     renderHeroName(1);
   });
@@ -405,9 +536,17 @@ if (!reduceMotion) {
     y: 0,
     scale: 1,
     textShadow: "0 0 0 rgba(139, 120, 255, 0)",
-    duration: 1,
+    duration: 0.7,
     ease: "power3.inOut",
   });
+  intro.to(".dynamic-island", {
+    autoAlpha: 1,
+    x: 0,
+    scale: 1,
+    filter: "blur(0px)",
+    duration: 0.45,
+    ease: "back.out(1.7)",
+  }, "<");
   intro.to(nameTyping, {
     characters: heroNameText.length,
     duration: 0.75,
@@ -416,16 +555,39 @@ if (!reduceMotion) {
       renderHeroName(Math.round(nameTyping.characters));
     },
   }, "<0.18");
-  intro.set(".intro-overlay", { opacity: 0 });
-  const backgroundBlinkGaps = [0.012, 0.012, 0.015, 0.018, 0.021, 0.024, 0.027, 0.03, 0.033, 0.036, 0.039, 0.033];
-  backgroundBlinkGaps.forEach((gap, index) => {
-    intro.to({}, { duration: gap });
-    intro.set(".intro-overlay", { opacity: index % 2 === 0 ? 0 : 1 });
+  intro.to(".hero-name", {
+    filter: "blur(0px)",
+    duration: 0.75,
+    ease: "power1.out",
+  }, "<");
+  addSlowingNameBlink(intro, ".hero-name", "<");
+  intro.to(".intro-overlay", {
+    opacity: 0,
+    duration: 0.25,
+    ease: "power1.out",
   });
-  intro.set(".intro-overlay", { opacity: 0 });
-  intro.set(helloIm, { display: "inline", opacity: 0 });
-  intro.to(helloIm, { opacity: 1, duration: 0.18, ease: "power1.out" });
-  intro.to(".role", { opacity: 1, duration: 0.25, ease: "power2.out" }, "-=0.1");
+  trianglePaths.forEach((path, index) => {
+    const start = index * 0.1;
+    for (let blink = 0; blink < 3; blink += 1) {
+      intro.set(path, { opacity: 1 }, start + blink * 0.12);
+      intro.set(path, { opacity: 0 }, start + blink * 0.12 + 0.06);
+    }
+    intro.set(path, { opacity: 1 }, start + 0.36);
+  });
+  intro.set(helloIm, { display: "inline", opacity: 0, filter: "blur(6px)" });
+  intro.to(helloIm, {
+    opacity: 1,
+    filter: "blur(0px)",
+    duration: 0.18,
+    ease: "power1.out",
+  });
+  intro.to(".role", {
+    opacity: 1,
+    filter: "blur(0px)",
+    duration: 0.25,
+    ease: "power2.out",
+  }, "-=0.1");
+  addRapidBlink(intro, ".role", ">", 0.055, "steps(1)");
 
   /* ---------- Hero parallax out (on .hero-copy so it never touches the intro) ---------- */
   gsap.fromTo(".hero-title", { yPercent: 0 }, {
@@ -446,7 +608,10 @@ if (!reduceMotion) {
   gsap.to(typing, {
     n: fullText.length,
     ease: "none",
-    onUpdate: () => renderTyped(Math.round(typing.n)),
+    onUpdate: () => {
+      renderTyped(Math.round(typing.n));
+      typedSpan.style.filter = `blur(${6 * (1 - typing.n / fullText.length)}px)`;
+    },
     scrollTrigger: {
       trigger: typedEl,
       start: "top 85%",
